@@ -48,20 +48,25 @@ export default class Markerupable {
   }
 
   get openedMarkups() {
-    let count = 0;
-    if (this.prev) {
-      count = commonItemLength(this.markups, this.prev.markups);
-    }
-
-    return this.markups.slice(count);
+    let prevMarkups = this.prev ? this.prev.markups : [];
+    return this.markups.filter(item => {
+      let inPrev = prevMarkups.indexOf(item) !== -1;
+      return !inPrev;
+    });
   }
 
   get closedMarkups() {
-    let count = 0;
-    if (this.next) {
-      count = commonItemLength(this.markups, this.next.markups);
+    let retVal;
+    if (!this.next) {
+      retVal =  this.markups.slice();
+    } else {
+      let nextMarkups = this.next.markups;
+      retVal = this.markups.filter(item => {
+        let inNext = nextMarkups.indexOf(item) !== -1;
+        return !inNext;
+      });
     }
 
-    return this.markups.slice(count);
+    return retVal;
   }
 }
