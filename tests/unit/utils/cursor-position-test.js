@@ -189,6 +189,111 @@ test('#move can move multiple units', (assert) => {
   assert.positionIsEqual(head.move(0), head, 'move(0) is no-op');
 });
 
+test('#moveWord move until first word boundary after word char (forward)', (assert) => {
+  let post = Helpers.postAbstract.buildWithText('abc def ghi-jkl');
+  let head = post.headPosition();
+  let section = head.section;
+  let pos = (text) => new Position(section, text.length);
+
+  assert.positionIsEqual(head.moveWord(1), pos('abc'),
+                        'moves to position before next word-boundary');
+
+  head = pos('abc');
+  assert.positionIsEqual(head.moveWord(1), pos('abc def'),
+                         'moves over whitespace to next word boundary');
+
+  head = pos('abc def g');
+  assert.positionIsEqual(head.moveWord(1), pos('abc def ghi'),
+                         'mid-word moves over to next word boundary');
+
+  head = pos('abc def ghi-j');
+  assert.positionIsEqual(head.moveWord(1), pos('abc def ghi-jkl'),
+                         'moves forward to tail position');
+});
+
+test('#moveWord move through multiple spaces until next word (forward)', (assert) => {
+  let post = Helpers.postAbstract.buildWithText('   def ghi');
+  let tail = post.tailPosition();
+  let section = tail.section;
+  let pos = (text) => new Position(section, text.length);
+
+  assert.positionIsEqual(pos('').moveWord(1), pos('   def'));
+});
+
+test('#moveWord move through multiple spaces until section boundary (forward)', (assert) => {
+  let post = Helpers.postAbstract.buildWithText('abc   ');
+  let tail = post.tailPosition();
+  let section = tail.section;
+  let pos = (text) => new Position(section, text.length);
+
+  assert.positionIsEqual(pos('abc ').moveWord(1), pos('abc   '));
+});
+
+test('#moveWord when position is at section boundary', (assert) => {
+  let post = Helpers.postAbstract.build(({post, markupSection, cardSection, marker}) => {
+    return post([
+      markupSection('p', [marker('abc 123')]),
+      markupSection('p', [marker('def 456')]),
+      cardSection('some-card'),
+      markupSection('p', [marker('ghi 789')]),
+    ]);
+  });
+  let sections = post.sections.toArray();
+  let headOf = (idx) => sections[idx].headPosition();
+  let tailOf = (idx) => sections[idx].tailPosition();
+  let pos = (idx, text) => new Position(sections[idx], text.length);
+
+  assert.positionIsEqual(tailOf(0).moveWord(1), pos(1, 'def'),
+                        'tail of markerable forward into markerable');
+  assert.positionIsEqual(headOf(1).moveWord(-1), pos(0, 'abc '),
+                        'head of markerable backward into markerable');
+
+  assert.positionIsEqual(headOf(3).moveWord(-1), headOf(3),
+                         'backward into cardSection is no-op');
+  assert.positionIsEqual(tailOf(1).moveWord(1), tailOf(1),
+                         'forward into cardSection is no-op');
+});
+
+test('#moveWord move until first word boundary after word char (backward)', (assert) => {
+  let post = Helpers.postAbstract.buildWithText('abc def ghi-jkl');
+  let tail = post.tailPosition();
+  let section = tail.section;
+  let pos = (text) => new Position(section, text.length);
+
+  assert.positionIsEqual(tail.moveWord(-1), pos('abc def ghi-'),
+                        'moves to position before next word-boundary');
+
+  tail = pos('abc def ');
+  assert.positionIsEqual(tail.moveWord(-1), pos('abc '),
+                         'moves over whitespace to next word boundary');
+
+  tail = pos('abc def g');
+  assert.positionIsEqual(tail.moveWord(-1), pos('abc def '),
+                         'mid-word moves over to next word boundary');
+
+  tail = pos('abc');
+  assert.positionIsEqual(tail.moveWord(-1), pos(''),
+                         'moves backward to head position');
+});
+
+test('#moveWord move through multiple spaces until next word (backward)', (assert) => {
+  let post = Helpers.postAbstract.buildWithText('123 abc   ');
+  let tail = post.tailPosition();
+  let section = tail.section;
+  let pos = (text) => new Position(section, text.length);
+
+  assert.positionIsEqual(pos('123 abc   ').moveWord(-1), pos('123 '));
+});
+
+test('#moveWord move through multiple spaces until section boundary (backward)', (assert) => {
+  let post = Helpers.postAbstract.buildWithText('   ');
+  let tail = post.tailPosition();
+  let section = tail.section;
+  let pos = (text) => new Position(section, text.length);
+
+  assert.positionIsEqual(pos('   ').moveWord(-1), pos(''));
+});
+
 test('#fromNode when node is marker text node', (assert) => {
   editor = Helpers.mobiledoc.renderInto(editorElement,
     ({post, markupSection, marker}) => {

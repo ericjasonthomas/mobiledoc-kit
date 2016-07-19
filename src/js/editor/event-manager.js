@@ -21,7 +21,9 @@ export default class EventManager {
     this.logger = editor.loggerFor('event-manager');
     this._textInputHandler = new TextInputHandler(editor);
     this._listeners = [];
-    this.isShift = false;
+
+    this.isShiftDown = false;
+    this.isAltDown = false;
 
     this._selectionManager = new SelectionManager(
       this.editor, this.selectionDidChange.bind(this));
@@ -132,7 +134,10 @@ export default class EventManager {
 
     let key = Key.fromEvent(event);
     if (key.isShiftKey()) {
-      this.isShift = true;
+      this.isShiftDown = true;
+    }
+    if (key.isAltKey()) {
+      this.isAltDown = true;
     }
 
     if (editor.handleKeyCommand(event)) { return; }
@@ -157,7 +162,9 @@ export default class EventManager {
         event.preventDefault();
         break;
       case key.isDelete():
-        editor.handleDeletion(event);
+        let { direction } = key;
+        let unit = this.isAltDown ? 'word' : 'char';
+        editor.delete({direction, unit});
         event.preventDefault();
         break;
       case key.isEnter():
@@ -175,7 +182,10 @@ export default class EventManager {
     if (!editor.hasCursor()) { return; }
     let key = Key.fromEvent(event);
     if (key.isShiftKey()) {
-      this.isShift = false;
+      this.isShiftDown = false;
+    }
+    if (key.isAltKey()) {
+      this.isAltDown = false;
     }
   }
 
@@ -183,7 +193,7 @@ export default class EventManager {
     event.preventDefault();
 
     this.copy(event);
-    this.editor.handleDeletion();
+    this.editor.delete();
   }
 
   copy(event) {
@@ -208,10 +218,10 @@ export default class EventManager {
     let range = editor.range;
 
     if (!range.isCollapsed) {
-      editor.handleDeletion();
+      editor.delete();
     }
     let position = editor.range.head;
-    let targetFormat = this.isShift ? 'text' : 'html';
+    let targetFormat = this.isShiftDown ? 'text' : 'html';
     let pastedPost = parsePostFromPaste(event, editor, {targetFormat});
 
     editor.run(postEditor => {

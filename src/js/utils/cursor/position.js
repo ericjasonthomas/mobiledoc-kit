@@ -7,6 +7,9 @@ import {
 import { containsNode } from 'mobiledoc-kit/utils/dom-utils';
 import { findOffsetInNode } from 'mobiledoc-kit/utils/selection-utils';
 
+const BACKWARD = -1;
+const FORWARD = 1;
+
 function findParentSectionFromNode(renderTree, node) {
   let renderNode =  renderTree.findRenderNodeFromElement(
     node,
@@ -123,6 +126,12 @@ const Position = class Position {
     return this.section && this.section.isMarkerable;
   }
 
+  get char() {
+    if (!this.isMarkerable) { return; }
+    let { marker, offsetInMarker } = this;
+    return marker.charAt(offsetInMarker);
+  }
+
   get marker() {
     return this.isMarkerable && this.markerPosition.marker;
   }
@@ -162,6 +171,101 @@ const Position = class Position {
       return this.moveRight().move(--units);
     } else {
       return this;
+    }
+  }
+
+  moveWordBackward() {
+    let pos = this;
+    let nextPos = pos.move(BACKWARD);
+
+    if (this.section.isBlank) {
+      return this;
+    }
+    if (!nextPos.isMarkerable) {
+      return pos;
+    }
+
+    let WORD_BOUNDARY_REGEX = /\s|-/;
+    let isWordBoundary = (char) => WORD_BOUNDARY_REGEX.test(char);
+    let isWord = (char) => !isWordBoundary(char);
+
+    let nextChar = nextPos.char;
+    let foundWord = isWord(nextChar);
+
+    while (!foundWord && !nextPos.isHead()) {
+      pos = nextPos;
+      nextPos = nextPos.move(BACKWARD);
+      nextChar = nextPos.char;
+      foundWord = isWord(nextChar);
+    }
+
+    if (nextPos.isHead()) {
+      return nextPos;
+    }
+
+    let foundBoundary = isWordBoundary(nextChar);
+    while (!foundBoundary && !nextPos.isHead()) {
+      pos = nextPos;
+      nextPos = nextPos.move(BACKWARD);
+      nextChar = nextPos.char;
+      foundBoundary = isWordBoundary(nextChar);
+    }
+
+    if (nextPos.isHead()) {
+      return nextPos;
+    }
+
+    return pos;
+  }
+
+  moveWordForward() {
+    let pos = this;
+    let nextPos = pos.move(FORWARD);
+
+    if (this.section.isBlank) {
+      return this;
+    }
+    if (!nextPos.isMarkerable) {
+      return pos;
+    }
+
+    let WORD_BOUNDARY_REGEX = /\s|-/;
+    let isWordBoundary = (char) => WORD_BOUNDARY_REGEX.test(char);
+    let isWord = (char) => !isWordBoundary(char);
+
+    let nextChar = nextPos.char;
+    let foundWord = isWord(nextChar);
+    while (!foundWord && !nextPos.isTail()) {
+      pos = nextPos;
+      nextPos = nextPos.move(FORWARD);
+      nextChar = nextPos.char;
+      foundWord = isWord(nextChar);
+    }
+
+    if (nextPos.isTail()) {
+      return nextPos;
+    }
+
+    let foundBoundary = isWordBoundary(nextChar);
+    while (!foundBoundary && !nextPos.isTail()) {
+      pos = nextPos;
+      nextPos = nextPos.move(FORWARD);
+      nextChar = nextPos.char;
+      foundBoundary = isWordBoundary(nextChar);
+    }
+
+    if (nextPos.isTail()) {
+      return nextPos;
+    }
+
+    return nextPos;
+  }
+
+  moveWord(direction) {
+    if (direction === BACKWARD) {
+      return this.moveWordBackward();
+    } else {
+      return this.moveWordForward();
     }
   }
 

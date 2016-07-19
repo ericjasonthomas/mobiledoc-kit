@@ -168,6 +168,15 @@ const Key = class Key {
     return this.keyCode === Keycodes.SHIFT;
   }
 
+  /*
+   * If the key is the actual alt key (aka "option" on mac). This is false when the alt key
+   * is held down and the source `event` is not the alt key.
+   * @return {bool}
+   */
+  isAltKey() {
+    return this.keyCode === Keycodes.ALT;
+  }
+
   hasModifier(modifier) {
     return modifier & this.modifierMask;
   }

@@ -27,6 +27,14 @@ function build(treeFn) {
   return treeFn(simpleBuilder);
 }
 
+function buildWithText(text) {
+  let builder = new PostNodeBuilder();
+  return builder.createPost([
+    builder.createMarkupSection('p', [builder.createMarker(text)])
+  ]);
+}
+
 export default {
-  build
+  build,
+  buildWithText
 };

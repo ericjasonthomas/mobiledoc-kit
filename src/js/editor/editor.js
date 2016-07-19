@@ -1,7 +1,7 @@
 import Tooltip from '../views/tooltip';
 import PostEditor from './post';
 import ImageCard from '../cards/image';
-import Key from '../utils/key';
+import { DIRECTION } from '../utils/key';
 import mobiledocParsers from '../parsers/mobiledoc';
 import HTMLParser from '../parsers/html';
 import DOMParser from '../parsers/dom';
@@ -295,25 +295,49 @@ class Editor {
     this.keyCommands.unshift(keyCommand);
   }
 
+  deleteInDirection(direction, {unit}) {
+    let { range } = this;
+
+    if (unit === 'word') {
+      return this.deleteWordInDirection(direction);
+    } else {
+      this.run(postEditor => {
+        let nextPosition = postEditor.deleteFrom(range.head, direction);
+        postEditor.setRange(new Range(nextPosition));
+      });
+    }
+  }
+
+  deleteWordInDirection(direction) {
+    let { range: { head: curPos } } = this;
+
+    let nextPos = curPos.moveWord(direction);
+
+    let FORWARD = 1;
+    let head = direction === FORWARD ? curPos : nextPos;
+    let tail = direction === FORWARD ? nextPos : curPos;
+
+    return this.deleteRange(new Range(head, tail, direction));
+  }
+
+  deleteRange(range) {
+    this.run(postEditor => {
+      let nextPosition = postEditor.deleteRange(range);
+      postEditor.setRange(new Range(nextPosition));
+    });
+  }
+
   /**
    * @param {KeyEvent} [event]
    * @private
    */
-  handleDeletion(event=null) {
+  delete({direction, unit}={direction: DIRECTION.BACKWARD, unit: 'char'}) {
     let { range } = this;
 
-    if (!range.isCollapsed) {
-      this.run(postEditor => {
-        let nextPosition = postEditor.deleteRange(range);
-        postEditor.setRange(new Range(nextPosition));
-      });
-    } else if (event) {
-      let key = Key.fromEvent(event);
-      this.run(postEditor => {
-        let nextPosition = postEditor.deleteFrom(range.head, key.direction);
-        let newRange = new Range(nextPosition);
-        postEditor.setRange(newRange);
-      });
+    if (range.isCollapsed) {
+      this.deleteInDirection(direction, {unit});
+    } else {
+      this.deleteRange(range);
     }
   }
 
